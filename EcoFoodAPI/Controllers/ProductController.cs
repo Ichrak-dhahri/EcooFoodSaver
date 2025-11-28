@@ -1,83 +1,238 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿// Controllers/ProductController.cs
+using EcoFoodAPI.DTOs.Product;
+using EcoFoodAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EcoFoodAPI.Controllers
 {
-    public class ProductController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ProductController : ControllerBase
     {
-        // GET: ProductController
-        public ActionResult Index()
+        private readonly IProductService _productService;
+
+        public ProductController(IProductService productService)
         {
-            return View();
+            _productService = productService;
         }
 
-        // GET: ProductController/Details/5
-        public ActionResult Details(int id)
+        /// <summary>
+        /// Récupérer tous les produits avec filtres optionnels (Public)
+        /// </summary>
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAllProducts([FromQuery] ProductFilterDto filter)
         {
-            return View();
+            var products = await _productService.GetAllProductsAsync(filter);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Liste des produits récupérée avec succès",
+                count = products.Count,
+                data = products
+            });
         }
 
-        // GET: ProductController/Create
-        public ActionResult Create()
+        /// <summary>
+        /// Récupérer un produit par ID (Public)
+        /// </summary>
+        [HttpGet("{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetProductById(int id)
         {
-            return View();
+            var product = await _productService.GetProductByIdAsync(id);
+
+            if (product == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Produit non trouvé"
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Produit récupéré avec succès",
+                data = product
+            });
         }
 
-        // POST: ProductController/Create
+        /// <summary>
+        /// Récupérer mes produits (Authentifié) 
+        /// </summary>
+        [HttpGet("my-products")]
+        [Authorize]
+        public async Task<IActionResult> GetMyProducts()
+        {
+            var userId = GetCurrentUserId();
+            var products = await _productService.GetMyProductsAsync(userId);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Vos produits récupérés avec succès",
+                count = products.Count,
+                data = products
+            });
+        }
+
+        /// <summary>
+        /// Ajouter un nouveau produit (Authentifié) 🔒
+        /// </summary>
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        [Authorize]
+        public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto createDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                return RedirectToAction(nameof(Index));
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Données invalides",
+                    errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                });
             }
-            catch
+
+            var userId = GetCurrentUserId();
+            var product = await _productService.CreateProductAsync(userId, createDto);
+
+            if (product == null)
             {
-                return View();
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Impossible de créer le produit. Vérifiez que la catégorie existe."
+                });
             }
+
+            return CreatedAtAction(
+                nameof(GetProductById),
+                new { id = product.IdProduit },
+                new
+                {
+                    success = true,
+                    message = "Produit créé avec succès",
+                    data = product
+                });
         }
 
-        // GET: ProductController/Edit/5
-        public ActionResult Edit(int id)
+        /// <summary>
+        /// Modifier un produit (Authentifié - Propriétaire uniquement) 🔒
+        /// </summary>
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] UpdateProductDto updateDto)
         {
-            return View();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Données invalides",
+                    errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                });
+            }
+
+            var userId = GetCurrentUserId();
+            var product = await _productService.UpdateProductAsync(userId, id, updateDto);
+
+            if (product == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Impossible de modifier le produit. Vous n'êtes pas le propriétaire ou le produit n'existe pas."
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Produit modifié avec succès",
+                data = product
+            });
         }
 
-        // POST: ProductController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        /// <summary>
+        /// Supprimer un produit (Authentifié - Propriétaire ou Admin) 🔒
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteProduct(int id)
         {
-            try
+            var userId = GetCurrentUserId();
+            var isAdmin = User.IsInRole("Admin");
+
+            var result = await _productService.DeleteProductAsync(userId, id, isAdmin);
+
+            if (!result)
             {
-                return RedirectToAction(nameof(Index));
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Impossible de supprimer le produit. Vous n'êtes pas le propriétaire ou le produit n'existe pas."
+                });
             }
-            catch
+
+            return Ok(new
             {
-                return View();
-            }
+                success = true,
+                message = "Produit supprimé avec succès"
+            });
         }
 
-        // GET: ProductController/Delete/5
-        public ActionResult Delete(int id)
+        /// <summary>
+        /// Rechercher des produits proches de l'expiration (Public)
+        /// </summary>
+        [HttpGet("proche-expiration")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetProductsProcheExpiration()
         {
-            return View();
+            var filter = new ProductFilterDto { ProcheExpiration = true };
+            var products = await _productService.GetAllProductsAsync(filter);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Produits proches de l'expiration récupérés",
+                count = products.Count,
+                data = products
+            });
         }
 
-        // POST: ProductController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
+        /// <summary>
+        /// Rechercher des produits par ville (Public)
+        /// </summary>
+        [HttpGet("by-city/{ville}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetProductsByCity(string ville)
         {
-            try
+            var filter = new ProductFilterDto { Ville = ville };
+            var products = await _productService.GetAllProductsAsync(filter);
+
+            return Ok(new
             {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+                success = true,
+                message = $"Produits à {ville} récupérés",
+                count = products.Count,
+                data = products
+            });
+        }
+
+        // Méthode utilitaire pour récupérer l'ID de l'utilisateur connecté
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.Parse(userIdClaim!);
         }
     }
 }

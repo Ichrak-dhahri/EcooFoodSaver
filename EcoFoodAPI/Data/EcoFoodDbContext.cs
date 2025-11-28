@@ -26,6 +26,7 @@ namespace EcoFoodAPI.Data
             // Configuration de la table User
             modelBuilder.Entity<User>(entity =>
             {
+                entity.ToTable("user");
                 entity.HasKey(e => e.IdUser);
                 entity.Property(e => e.IdUser).ValueGeneratedOnAdd();
 
@@ -69,25 +70,32 @@ namespace EcoFoodAPI.Data
             // Configuration de la table Message
             modelBuilder.Entity<Message>(entity =>
             {
+                entity.ToTable("message"); // ✅ CORRECTION: message, pas reservation !
                 entity.HasKey(e => e.IdMessage);
                 entity.Property(e => e.IdMessage).ValueGeneratedOnAdd();
 
-                // Relation avec User (Sender)
+                // Relations avec User
                 entity.HasOne(m => m.IdSenderNavigation)
                       .WithMany(u => u.MessageIdSenderNavigations)
                       .HasForeignKey(m => m.IdSender)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Relation avec User (Receiver)
                 entity.HasOne(m => m.IdReceiverNavigation)
                       .WithMany(u => u.MessageIdReceiverNavigations)
                       .HasForeignKey(m => m.IdReceiver)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                // Relation avec Produit (si applicable)
+                entity.HasOne(m => m.IdProduitNavigation)
+                      .WithMany(p => p.Messages)
+                      .HasForeignKey(m => m.IdProduit)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configuration de la table Rating
             modelBuilder.Entity<Rating>(entity =>
             {
+                entity.ToTable("rating");
                 entity.HasKey(e => e.IdRating);
                 entity.Property(e => e.IdRating).ValueGeneratedOnAdd();
 
@@ -107,13 +115,19 @@ namespace EcoFoodAPI.Data
             // Configuration de la table Reservation
             modelBuilder.Entity<Reservation>(entity =>
             {
+                entity.ToTable("reservation"); // ✅
                 entity.HasKey(e => e.IdReservation);
                 entity.Property(e => e.IdReservation).ValueGeneratedOnAdd();
 
-                // Relation avec User
+                // Relations
                 entity.HasOne(r => r.IdUserNavigation)
                       .WithMany(u => u.Reservations)
                       .HasForeignKey(r => r.IdUser)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.IdProduitNavigation)
+                      .WithMany(p => p.Reservations)
+                      .HasForeignKey(r => r.IdProduit)
                       .OnDelete(DeleteBehavior.Cascade);
             });
         }

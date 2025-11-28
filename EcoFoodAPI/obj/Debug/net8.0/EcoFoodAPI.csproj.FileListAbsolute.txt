@@ -113,3 +113,4 @@ C:\Users\LENOVO\Desktop\3emeGLProjects\3emeGLProjects\EcoFoodSolution\EcoFoodAPI
 C:\Users\LENOVO\Desktop\3emeGLProjects\3emeGLProjects\EcoFoodSolution\EcoFoodAPI\obj\Debug\net8.0\EcoFoodAPI.pdb
 C:\Users\LENOVO\Desktop\3emeGLProjects\3emeGLProjects\EcoFoodSolution\EcoFoodAPI\obj\Debug\net8.0\EcoFoodAPI.genruntimeconfig.cache
 C:\Users\LENOVO\Desktop\3emeGLProjects\3emeGLProjects\EcoFoodSolution\EcoFoodAPI\obj\Debug\net8.0\ref\EcoFoodAPI.dll
+C:\Users\LENOVO\Desktop\3emeGLProjects\3emeGLProjects\EcoFoodSolution\EcoFoodAPI\obj\Debug\net8.0\EcoFoodAPI.sourcelink.json

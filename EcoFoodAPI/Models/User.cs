@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EcoFoodAPI.Models
 {
-    [Table("user")]  // <<< IMPORTANT : EF va maintenant mapper cette classe à la table "user"
+    [Table("user")]  // 
     public partial class User
     {
         public int IdUser { get; set; }

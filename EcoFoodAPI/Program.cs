@@ -42,6 +42,7 @@ builder.Services.AddAuthentication(options =>
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
     };
 });
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<IProfileService, ProfileService>();
